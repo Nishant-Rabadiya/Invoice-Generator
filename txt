@@ -1,0 +1,1000 @@
+interface BuyerData {
+    buyerAddress: string,
+    buyerEmail: string,
+    buyerName: string
+}
+
+interface SellerData {
+    sellerAddress: string,
+    sellerEmail: string,
+    sellerName: string
+}
+
+interface ItemDetails {
+    id: number,
+    itemDiscription?: string,
+    itemId: number,
+    itemName: string,
+    itemPrice: string,
+    itemQuantity: number
+}
+
+interface InvoiceData {
+    currency?: string,
+    buyerDetails: BuyerData,
+    sellerDetails: SellerData,
+    discount: string,
+    dueDate: string,
+    invoiceGenerateDate: string,
+    invoiceId?: number,
+    note?: string,
+    taxRate: string,
+    totalAmount: string,
+    itemDetails: ItemDetails[]
+}
+
+const createInvoice = () => {
+    location.replace('/html/invoice.html');
+}
+
+const allInvoiceData = () => {
+    let data = localStorage.getItem('allInvoiceData');
+    return data ? JSON.parse(data) : [];
+}
+
+const noInvoice = () => {
+    const data: InvoiceData[] = allInvoiceData();
+    const noInvoiceMessage = document.getElementById('noInvoiceMessage') as HTMLElement | null;
+    if (!data.length) {
+        if (noInvoiceMessage)
+            noInvoiceMessage.style.display = "block";
+
+    } else {
+        if (noInvoiceMessage)
+            noInvoiceMessage.style.display = "none";
+    }
+}
+noInvoice();
+
+const list = (): void => {
+    const data: InvoiceData[] = allInvoiceData();
+    const invoiceListSection = document.getElementById('invoiceListSection') as HTMLElement | null;
+    if (invoiceListSection)
+        invoiceListSection.innerHTML = "";
+    data.map((item: InvoiceData, idex: number) => {
+        if (invoiceListSection) {
+            invoiceListSection.innerHTML += `
+        <div class="invoice-list">
+            <p class="invoice-list-index">${idex + 1}</p>
+            <div class="list-name-section">
+                <p class="invoice-list-title">${item.buyerDetails.buyerName}</p>
+                <p class="invoice-list-id">${item.invoiceId}</p>
+            </div>
+            <div class="list-amount-section">
+                <p class="list-amount-heading">Total Amount:</p>
+                <p class="list-amount-total">${(item.currency === "USD (United States Doller)" ? `<i class="fa-solid fa-dollar-sign"></i>` : `<i class="fa-solid fa-indian-rupee-sign"></i>`)} ${item.totalAmount}</p>
+            </div>
+            <button onclick="editInvoice(${idex})" class="invoice-list-edit-button" data-bs-toggle="modal" data-bs-target="#staticBackdrop">Edit</button>
+            <button class="invoice-list-print-button" onclick="printInvoice(this)">Print</button>
+            <button onclick="removeInvoice(${idex})" class="invoice-list-delete-button">Delete</button>
+        </div>
+        `
+        }
+    })
+}
+list();
+
+const removeInvoice = (index: number): void => {
+    const confirmed: boolean = confirm("Are you sure you want to delete this Invoice?");
+    if (confirmed) {
+        const data: InvoiceData[] = allInvoiceData();
+        data.splice(index, 1);
+        localStorage.setItem('allInvoiceData', JSON.stringify(data));
+        list();
+        noInvoice();
+    }
+}
+
+const editInvoiceBody = document.getElementById('editInvoiceBody') as HTMLElement | null;
+let currentData: InvoiceData;
+const editInvoice = (index: number): void => {
+    const data = allInvoiceData();
+    currentData = data[index];
+    if (editInvoiceBody) {
+        editInvoiceBody.innerHTML = `
+        <div class="invoice-body">
+            <div class="invoice-details-section">
+
+                <div class="invoice-date-section">
+                    <p class="invoice-date">Date: <span class="invoice-current-date">${data[index].invoiceGenerateDate}</span>
+                    </p>
+                    <div>
+                        <p class="invoice-date">Due date: <input oninput="editDueDateValue(this)" id="editDueDateValue" value="${data[index].dueDate}" type="date" class="invoice-due-date-input invoice-blank-input" id="dueDate" /></p>
+                    </div>
+                </div>
+
+                <div class="invoice-buyer-seller-detalis">
+                    <div>
+                        <p class="invoice-bill-to-or-from">Bill to:</p>
+                        <input oninput="editBuyerName(this)" id="editBuyerName" value="${data[index].buyerDetails.buyerName}" class="invoice-buyer-seller-detalis-input invoice-blank-input" type="text" placeholder="Who is this invoice to?" />
+                        <input id="editBuyerEmail" value="${data[index].buyerDetails.buyerEmail}" class="invoice-buyer-seller-detalis-input" type="text" placeholder="Email address" />
+                        <input oninput="editBuyerAddress(this)" id="editBuyerAddress" value="${data[index].buyerDetails.buyerAddress}" class="invoice-buyer-seller-detalis-input invoice-blank-input" type="text" placeholder="Billing address" />
+                    </div>
+                    <div>
+                        <p class="invoice-bill-to-or-from">Bill from:</p>
+                        <input oninput="editSellerName(this)" id="editSellerName" value="${data[index].sellerDetails.sellerName}" class="invoice-buyer-seller-detalis-input invoice-blank-input" type="text" placeholder="Who is this invoice from?" />
+                        <input id="editSellerEmail" value="${data[index].sellerDetails.sellerEmail}" class="invoice-buyer-seller-detalis-input" type="text" placeholder="Email address" />
+                        <input oninput="editSellerAddress(this)" id="editSellerAddress" value="${data[index].sellerDetails.sellerAddress}" class="invoice-buyer-seller-detalis-input invoice-blank-input" type="text" placeholder="Billing address" />
+                    </div>
+                </div>
+
+                <div>
+                    <table class="items-table" id="itemTable">
+                       
+                    </table>
+                </div>
+                <p class="item-table-error" id="itemTableError"></p>
+                <div>
+                    <button class="add-item-button" onclick="editItemTableRaw(${index})">Add Item</button>
+                </div>
+
+                <div class="invoice-calculation-section">
+                    <div class="invoice-calculation">
+                        <p class="calculation-heading">Subtotal:</p>
+                        <p class="calculation-number" id="subTotal"><span><i class="fa-solid fa-dollar-sign"></i></span> 0.00</p>
+                    </div>
+                    <div class="invoice-calculation">
+                        <p class="calculation-heading">Discount:</p>
+                        <p class="calculation-number"><span id="discountRate">(${data[index].discount}%)</span> <span id="discountTotal"><i class="fa-solid fa-dollar-sign"></i> </span></p>
+                    </div>
+                    <div class="invoice-calculation">
+                        <p class="calculation-heading">Tax:</p>
+                        <p class="calculation-number"><span id="taxRate">(${data[index].taxRate}%)</span> <span id="taxTotal"><i class="fa-solid fa-dollar-sign"></i></span> </p>
+                    </div>
+                    <div class="invoice-calculation final-calculation">
+                        <p class="invoice-total-heading">Total:</p>
+                        <p class="invoice-total" id="total"><i class="fa-solid fa-dollar-sign"></i> 0</p>
+                    </div>
+                </div>
+                <hr class="horizontal-line">
+
+                <div>
+                    <p class="add-invoice-note-heading">Notes:</p>
+                    <textarea oninput="editNote(this)" name="" id="editNote" class="add-invoice-note" placeholder="Thanks for your business">${data[index].note ? data[index].note : ""}</textarea>
+                </div>
+
+                <div class="submit-section">
+                    <button class="submit-invoice" onclick="doneInvoice(${index})">Done</button>
+                </div>
+            </div>
+
+            <div class="invoice-currency-discount-tax-section">
+                <button class="review-invoice" data-bs-toggle="modal" data-bs-target="#openModel" onclick="editedReviewInvoice(${index})">Review Invoice</button>
+
+                <div>
+                    <label class="currency-label">Currency:</label>
+                    <select id="editCurrencyValue" value="${data[index].currency}" class="currency-dropdown">
+                        <option>USD (United States Doller)</option>
+                        <option>INR (Indian Rupee)</option>
+                    </select>
+                </div>
+
+                <div>
+                    <p class="discount-tax-rate-heading">Tax rate:</p>
+                    <input oninput="editTaxRateValue(this)" id="editTaxRateValue" value="${data[index].taxRate}" type="number" class="discount-tax-rate-input invoice-blank-input" placeholder="0.0" /><span class="discount-tax-rate-sign">%</span>
+                </div>
+
+                <div>
+                    <p class="discount-tax-rate-heading">Discount rate:</p>
+                    <input oninput="editDiscountValue(this)" id="editDiscountValue" value="${data[index].discount}" type="number" class="discount-tax-rate-input invoice-blank-input" placeholder="0.0" /><span class="discount-tax-rate-sign">%</span>
+                </div>
+            </div>
+        </div>            
+    `}
+
+    const itemTable = document.getElementById("itemTable");
+    if (itemTable) {
+        itemTable.innerHTML = "";
+        itemTable.innerHTML = `
+            <tr>
+                <th class="table-item table-data">ITEM</th>
+                <th class="table-quantity table-data">QTY</th>
+                <th class="table-price-rate table-data">PRICE/RATE</th>
+                <th class="table-action table-data">ACTION</th>
+            </tr>
+    `;
+    }
+
+    data[index].itemDetails.map((x: ItemDetails) => {
+        if (itemTable) {
+            itemTable.innerHTML += `
+            <tr id="${x.id}">
+                <td><input id="${x.itemId}" value="${x.itemName ? x.itemName : ""}" class="table-item-input table-item-name" type="text" placeholder="Item name" />
+                <input value="${x.itemDiscription ? x.itemDiscription : ""}" class="table-item-input table-item-discription" type="text" placeholder="Item description" /></td>
+                <td><input oninput="editItemQuantityValue(this)" value="${x.itemQuantity ? x.itemQuantity : ""}" class="table-quantity-input item-table-quantity" type="number" placeholder="0" /></td>
+                <td><span class="table-currency-symbol">${data[index].currency === "USD (United States Doller)" ? `<i class="fa-solid fa-dollar-sign"></i>` : `<i class="fa-solid fa-indian-rupee-sign"></i>`}</span>
+                <input oninput="editItemPriceValue(this)" value="${x.itemPrice ? x.itemPrice : ""}" class="table-price-rate-input table-price" type="number" placeholder="0" /></td>
+                <td><button class="table-action-button" onclick="removeTableRaw(this)"><i class="fa-regular fa-trash-can"></i></button></td>
+            </tr>
+        `;
+        }
+    })
+
+    let itemPriceSubtotal: number = 0;
+    data[index].itemDetails.forEach((item: ItemDetails) => {
+        itemPriceSubtotal += (parseFloat(item.itemPrice) * item.itemQuantity) ? parseFloat(item.itemPrice) * item.itemQuantity : 0;
+    })
+    const subTotal = document.getElementById("subTotal") as HTMLElement | null;
+    if (subTotal) {
+        subTotal.innerHTML = (data[index].currency === "USD (United States Doller)" ? `<i class="fa-solid fa-dollar-sign"></i>` : `<i class="fa-solid fa-indian-rupee-sign"></i>`) + " " + itemPriceSubtotal.toString();
+    }
+
+    let discountAmount: string = (itemPriceSubtotal * (parseFloat(data[index].discount ? data[index].discount : "0") / 100)).toFixed(2);
+    const discountTotal = document.getElementById("discountTotal") as HTMLElement | null;
+    if (discountTotal) {
+        discountTotal.innerHTML = (data[index].currency === "USD (United States Doller)" ? `<i class="fa-solid fa-dollar-sign"></i>` : `<i class="fa-solid fa-indian-rupee-sign"></i>`) + " " + (discountAmount ? discountAmount : "0.00");
+    }
+
+    let discountTotalAmount: number = itemPriceSubtotal - itemPriceSubtotal * (parseFloat(data[index].discount ? data[index].discount : "0") / 100);
+    let taxRateTotal: string = (discountTotalAmount * (parseFloat(data[index].taxRate ? data[index].taxRate : "0") / 100)).toFixed(2);
+    const taxTotal = document.getElementById("taxTotal") as HTMLElement | null;
+    if (taxTotal) {
+        taxTotal.innerHTML = (data[index].currency === "USD (United States Doller)" ? `<i class="fa-solid fa-dollar-sign"></i>` : `<i class="fa-solid fa-indian-rupee-sign"></i>`) + " " + (taxRateTotal ? taxRateTotal : "0.00");
+    }
+
+    let totalAmount: number = itemPriceSubtotal - itemPriceSubtotal * (parseFloat(data[index].discount ? data[index].discount : "0") / 100);
+    let allTotal: number = totalAmount + totalAmount * (parseFloat(data[index].taxRate ? data[index].taxRate : "0") / 100);
+    const total = document.getElementById("total") as HTMLElement | null;
+    if (total) {
+        total.innerHTML = (data[index].currency === "USD (United States Doller)" ? `<i class="fa-solid fa-dollar-sign"></i>` : `<i class="fa-solid fa-indian-rupee-sign"></i>`) + " " + (allTotal.toFixed(2) ? allTotal.toFixed(2) : "0.00");
+    }
+    editDisabledPastDate();
+}
+
+const editDisabledPastDate = (): void => {
+    const editDueDateValue = document.getElementById('editDueDateValue') as HTMLInputElement | null;
+    const today: string = new Date().toISOString().split('T')[0];
+    if (editDueDateValue)
+        editDueDateValue.setAttribute('min', today);
+}
+
+const editDueDateValue = (e: HTMLInputElement) => {
+    currentData.dueDate = e.value;
+}
+
+const editBuyerName = (e: HTMLInputElement) => {
+    currentData.buyerDetails.buyerName = e.value;
+}
+
+const editBuyerAddress = (e: HTMLInputElement) => {
+    currentData.buyerDetails.buyerAddress = e.value;
+}
+
+const editSellerName = (e: HTMLInputElement) => {
+    currentData.sellerDetails.sellerName = e.value;
+}
+const editSellerAddress = (e: HTMLInputElement) => {
+    currentData.sellerDetails.sellerAddress = e.value;
+}
+
+const editNote = (e: HTMLInputElement) => {
+    currentData.note = e.value;
+}
+
+const editTaxRateValue = (e: HTMLInputElement): void => {
+    const taxRate = document.getElementById('taxRate') as HTMLElement | null;
+    let value = parseFloat(e.value);
+    if (value > 100) {
+        value = 100;
+        e.value = '100';
+    }
+    if (taxRate) {
+        taxRate.innerText = e.value ? `(${e.value}%)` : "(0%)";
+        currentData.taxRate = e.value;
+    }
+}
+
+const editDiscountValue = (e: HTMLInputElement): void => {
+    const discountRate = document.getElementById('discountRate') as HTMLElement | null;
+    let value = parseFloat(e.value);
+    if (value > 100) {
+        value = 100;
+        e.value = '100';
+    }
+
+    if (discountRate) {
+        discountRate.innerText = e.value ? `(${e.value}%)` : "(0%)";
+        currentData.discount = e.value;
+    }
+}
+
+const editItemTableRaw = (index: number) => {
+
+    const date = new Date().getTime();
+
+    const data: InvoiceData = currentData;
+    // const data: InvoiceData[] = allInvoiceData();
+    data.itemDetails.push({
+        itemId: date,
+        id: 0,
+        itemPrice: "",
+        itemName: "",
+        itemQuantity: 0
+    });
+    // localStorage.setItem('allInvoiceData', JSON.stringify(data));
+    const itemTable = document.getElementById('itemTable') as HTMLTableElement | null;
+    // const dataList: InvoiceData[] = allInvoiceData();
+    const dataList: InvoiceData = currentData;
+    if (itemTable) {
+        itemTable.innerHTML = "";
+        itemTable.innerHTML = `
+            <tr>
+                <th class="table-item table-data">ITEM</th>
+                <th class="table-quantity table-data">QTY</th>
+                <th class="table-price-rate table-data">PRICE/RATE</th>
+                <th class="table-action table-data">ACTION</th>
+            </tr>
+        `;
+    }
+
+    const findFirstData: number = dataList.itemDetails.findIndex((item: ItemDetails) => item.itemId === date);
+    dataList.itemDetails[findFirstData].id = 0;
+    // localStorage.setItem('allInvoiceData', JSON.stringify(dataList));
+    const max: InvoiceData = currentData;
+    // const maxId = max.itemDetails.sort((a: ItemDetails, b: ItemDetails) => a.id <= b.id ? 1 : -1);
+    const maxId = max.itemDetails.reduce((max: any, obj: any) => (obj.id > max ? obj.id : max), -Infinity);
+    dataList.itemDetails.map((x: ItemDetails) => {
+        if (itemTable) {
+            itemTable.innerHTML += `
+            <tr id="${x.id ? x.id : maxId + 1}">
+                <td><input oninput="editItemValue(this)" id="${x.itemId}" value="${x.itemName ? x.itemName : ""}" class="table-item-input table-item-name" type="text" placeholder="Item name" />
+                <input oninput="editItemDiscriptionValue(this)" value="${x.itemDiscription ? x.itemDiscription : ""}" class="table-item-input table-item-discription" type="text" placeholder="Item description" /></td>
+                <td><input oninput="editItemQuantityValue(this)" value="${x.itemQuantity ? x.itemQuantity : ""}" class="table-quantity-input item-table-quantity" type="number" placeholder="0" /></td>
+                <td><span class="table-currency-symbol">${dataList.currency === "USD (United States Doller)" ? `<i class="fa-solid fa-dollar-sign"></i>` : `<i class="fa-solid fa-indian-rupee-sign"></i>`}</span>
+                <input oninput="editItemPriceValue(this)" value="${x.itemPrice ? x.itemPrice : ""}" class="table-price-rate-input table-price" type="number" placeholder="0" /></td>
+                <td><button class="table-action-button remove-table-raw" onclick="removeTableRaw(this)"><i class="fa-regular fa-trash-can"></i></button></td>
+            </tr>
+        `;
+        }
+        dataList.itemDetails[findFirstData].id = maxId + 1;
+        // localStorage.setItem('allInvoiceData', JSON.stringify(dataList));
+
+    })
+    console.log(data);
+
+
+    // const date = new Date().getTime();
+    // const data: InvoiceData[] = allInvoiceData();
+    // data[index].itemDetails.push({
+    //     itemId: date,
+    //     id: 0,
+    //     itemPrice: "",
+    //     itemName: "",
+    //     itemQuantity: 0
+    // });
+    // localStorage.setItem('allInvoiceData', JSON.stringify(data));
+    // const itemTable = document.getElementById('itemTable') as HTMLTableElement | null;
+    // const dataList: InvoiceData[] = allInvoiceData();
+    // if (itemTable) {
+    //     itemTable.innerHTML = "";
+    //     itemTable.innerHTML = `
+    //         <tr>
+    //             <th class="table-item table-data">ITEM</th>
+    //             <th class="table-quantity table-data">QTY</th>
+    //             <th class="table-price-rate table-data">PRICE/RATE</th>
+    //             <th class="table-action table-data">ACTION</th>
+    //         </tr>
+    //     `;
+    // }
+
+    // const findFirstData: number = dataList[index].itemDetails.findIndex((item: ItemDetails) => item.itemId === date);
+    // dataList[index].itemDetails[findFirstData].id = 0;
+    // localStorage.setItem('allInvoiceData', JSON.stringify(dataList));
+    // const max: InvoiceData[] = allInvoiceData();
+    // const maxId = max[index].itemDetails.sort((a: ItemDetails, b: ItemDetails) => a.id <= b.id ? 1 : -1);
+    // dataList[index].itemDetails.map((x: ItemDetails) => {
+    //     if (itemTable) {
+    //         itemTable.innerHTML += `
+    //         <tr id="${x.id ? x.id : maxId[0].id + 1}">
+    //             <td><input oninput="editItemValue(this)" id="${x.itemId}" value="${x.itemName ? x.itemName : ""}" class="table-item-input table-item-name" type="text" placeholder="Item name" />
+    //             <input value="${x.itemDiscription ? x.itemDiscription : ""}" class="table-item-input table-item-discription" type="text" placeholder="Item description" /></td>
+    //             <td><input oninput="editItemQuantityValue(this)" value="${x.itemQuantity ? x.itemQuantity : ""}" class="table-quantity-input item-table-quantity" type="number" placeholder="0" /></td>
+    //             <td><span class="table-currency-symbol">${dataList[index].currency === "USD (United States Doller)" ? `<i class="fa-solid fa-dollar-sign"></i>` : `<i class="fa-solid fa-indian-rupee-sign"></i>`}</span>
+    //             <input oninput="editItemPriceValue(this)" value="${x.itemPrice ? x.itemPrice : ""}" class="table-price-rate-input table-price" type="number" placeholder="0" /></td>
+    //             <td><button class="table-action-button remove-table-raw" onclick="removeTableRaw(this)"><i class="fa-regular fa-trash-can"></i></button></td>
+    //         </tr>
+    //     `;
+    //     }
+    //     dataList[index].itemDetails[findFirstData].id = maxId[0].id + 1;
+    //     localStorage.setItem('allInvoiceData', JSON.stringify(dataList));
+    //     currentData = dataList[index]
+    // })
+}
+
+const editItemValue = (e: HTMLInputElement): void => {
+    const findData: number = currentData.itemDetails.findIndex((x: ItemDetails) => x.id.toString() === e.parentElement?.parentElement?.id);
+    currentData.itemDetails[findData].itemName = e.value;
+}
+
+const editItemDiscriptionValue = (e: HTMLInputElement): void => {
+    const findData: number = currentData.itemDetails.findIndex((x: ItemDetails) => x.id.toString() === e.parentElement?.parentElement?.id);
+    currentData.itemDetails[findData].itemDiscription = e.value;
+}
+
+
+const editItemQuantityValue = (e: HTMLInputElement): void => {
+    const findData: number = currentData.itemDetails.findIndex((x: ItemDetails) => x.id.toString() === e.parentElement?.parentElement?.id);
+    currentData.itemDetails[findData].itemQuantity = parseFloat(e.value);
+    // console.log(currentData);
+    editItemSubTotal();
+    editDiscountTotal();
+    editTaxTotal();
+    editTotal();
+}
+
+const editItemPriceValue = (e: HTMLInputElement): void => {
+    const findData: number = currentData.itemDetails.findIndex((x: ItemDetails) => x.id.toString() === e.parentElement?.parentElement?.id);
+    currentData.itemDetails[findData].itemPrice = e.value;
+    console.log(currentData);
+    editItemSubTotal();
+    editDiscountTotal();
+    editTaxTotal();
+    editTotal();
+}
+
+const editItemSubTotal = (): void => {
+    let data = currentData;
+    let itemPriceSubtotal: number = 0;
+    data.itemDetails.forEach((item: ItemDetails) => {
+        itemPriceSubtotal += (parseFloat(item.itemPrice) * item.itemQuantity) ? parseFloat(item.itemPrice) * item.itemQuantity : 0;
+    })
+    const subTotal = document.getElementById("subTotal") as HTMLElement | null;
+    if (subTotal) {
+        subTotal.innerHTML = (data.currency === "USD (United States Doller)" ? `<i class="fa-solid fa-dollar-sign"></i>` : `<i class="fa-solid fa-indian-rupee-sign"></i>`) + " " + itemPriceSubtotal.toString();
+    }
+}
+
+const editDiscountTotal = (): void => {
+    let data = currentData;
+    let itemPriceSubtotal: number = 0;
+    data.itemDetails.forEach((item: ItemDetails) => {
+        itemPriceSubtotal += (parseFloat(item.itemPrice) * item.itemQuantity) ? parseFloat(item.itemPrice) * item.itemQuantity : 0;
+    })
+    let discountAmount: string = (itemPriceSubtotal * (parseFloat(data.discount ? data.discount : "0") / 100)).toFixed(2);
+    const discountTotal = document.getElementById("discountTotal") as HTMLElement | null;
+    if (discountTotal) {
+        discountTotal.innerHTML = (data.currency === "USD (United States Doller)" ? `<i class="fa-solid fa-dollar-sign"></i>` : `<i class="fa-solid fa-indian-rupee-sign"></i>`) + " " + (discountAmount ? discountAmount : "0.00");
+    }
+}
+
+const editTaxTotal = (): void => {
+    let data = currentData;
+    let itemPriceSubtotal: number = 0;
+    data.itemDetails.forEach((item: ItemDetails) => {
+        itemPriceSubtotal += (parseFloat(item.itemPrice) * item.itemQuantity) ? parseFloat(item.itemPrice) * item.itemQuantity : 0;
+    })
+    let discountTotal: number = itemPriceSubtotal - itemPriceSubtotal * (parseFloat(data.discount ? data.discount : "0") / 100);
+    let taxRateTotal: string = (discountTotal * (parseFloat(data.taxRate ? data.taxRate : "0") / 100)).toFixed(2);
+    const taxTotal = document.getElementById("taxTotal") as HTMLElement | null;
+    if (taxTotal) {
+        taxTotal.innerHTML = (data.currency === "USD (United States Doller)" ? `<i class="fa-solid fa-dollar-sign"></i>` : `<i class="fa-solid fa-indian-rupee-sign"></i>`) + " " + (taxRateTotal ? taxRateTotal : "0.00");
+    }
+}
+
+const editTotal = (): void => {
+    let data = currentData;
+    let itemPriceSubtotal: number = 0;
+    data.itemDetails.forEach((item: ItemDetails) => {
+        itemPriceSubtotal += (parseFloat(item.itemPrice) * item.itemQuantity) ? parseFloat(item.itemPrice) * item.itemQuantity : 0;
+    });
+    let discountTotal: number = itemPriceSubtotal - itemPriceSubtotal * (parseFloat(data.discount ? data.discount : "0") / 100);
+    let allTotal: number = discountTotal + discountTotal * (parseFloat(data.taxRate ? data.taxRate : "0") / 100);
+    const total = document.getElementById("total") as HTMLElement | null;
+    if (total) {
+        total.innerHTML = (data.currency === "USD (United States Doller)" ? `<i class="fa-solid fa-dollar-sign"></i>` : `<i class="fa-solid fa-indian-rupee-sign"></i>`) + " " + (allTotal.toFixed(2) ? allTotal.toFixed(2) : "0.00");
+    }
+    currentData.totalAmount = allTotal.toFixed(2);
+}
+
+
+const removeTableRaw = (e: HTMLTableElement): void => {
+
+    e.parentElement?.parentElement?.remove();
+    let data = currentData;
+    // const dataList: InvoiceData[] = allInvoiceData();
+    // const findCurrentData: number = dataList.findIndex((x: InvoiceData) => x.invoiceId === currentData.invoiceId);
+    const findData: number = data.itemDetails.findIndex((x: ItemDetails) => x.id.toString() === e.parentElement?.parentElement?.id);
+    data.itemDetails.splice(findData, 1);
+    // localStorage.setItem('allInvoiceData', JSON.stringify(dataList));
+
+    // const data = allInvoiceData();
+    let itemPriceSubtotal: number = 0;
+    data.itemDetails.forEach((item: ItemDetails) => {
+        itemPriceSubtotal += (parseFloat(item.itemPrice) * item.itemQuantity) ? parseFloat(item.itemPrice) * item.itemQuantity : 0;
+    })
+    const subTotal = document.getElementById("subTotal") as HTMLElement | null;
+    if (subTotal) {
+        subTotal.innerHTML = (data.currency === "USD (United States Doller)" ? `<i class="fa-solid fa-dollar-sign"></i>` : `<i class="fa-solid fa-indian-rupee-sign"></i>`) + " " + itemPriceSubtotal.toString();
+    }
+
+    let discountAmount: string = (itemPriceSubtotal * (parseFloat(data.discount ? data.discount : "0") / 100)).toFixed(2);
+    const discountTotal = document.getElementById("discountTotal") as HTMLElement | null;
+    if (discountTotal) {
+        discountTotal.innerHTML = (data.currency === "USD (United States Doller)" ? `<i class="fa-solid fa-dollar-sign"></i>` : `<i class="fa-solid fa-indian-rupee-sign"></i>`) + " " + (discountAmount ? discountAmount : "0.00");
+    }
+
+    let discountTotalAmount: number = itemPriceSubtotal - itemPriceSubtotal * (parseFloat(data.discount ? data.discount : "0") / 100);
+    let taxRateTotal: string = (discountTotalAmount * (parseFloat(data.taxRate ? data.taxRate : "0") / 100)).toFixed(2);
+    const taxTotal = document.getElementById("taxTotal") as HTMLElement | null;
+    if (taxTotal) {
+        taxTotal.innerHTML = (data.currency === "USD (United States Doller)" ? `<i class="fa-solid fa-dollar-sign"></i>` : `<i class="fa-solid fa-indian-rupee-sign"></i>`) + " " + (taxRateTotal ? taxRateTotal : "0.00");
+    }
+
+    let totalAmount: number = itemPriceSubtotal - itemPriceSubtotal * (parseFloat(data.discount ? data.discount : "0") / 100);
+    let allTotal: number = totalAmount + totalAmount * (parseFloat(data.taxRate ? data.taxRate : "0") / 100);
+    const total = document.getElementById("total") as HTMLElement | null;
+    if (total) {
+        total.innerHTML = (data.currency === "USD (United States Doller)" ? `<i class="fa-solid fa-dollar-sign"></i>` : `<i class="fa-solid fa-indian-rupee-sign"></i>`) + " " + (allTotal.toFixed(2) ? allTotal.toFixed(2) : "0.00");
+        currentData.totalAmount = allTotal.toFixed(2);
+        // localStorage.setItem('allInvoiceData', JSON.stringify(dataList));
+    }
+
+    console.log(data);
+
+
+    // e.parentElement?.parentElement?.remove();
+    // const dataList: InvoiceData[] = allInvoiceData();
+    // const findCurrentData: number = dataList.findIndex((x: InvoiceData) => x.invoiceId === currentData.invoiceId);
+    // const findData: number = dataList[findCurrentData].itemDetails.findIndex((x: ItemDetails) => x.id.toString() === e.parentElement?.parentElement?.id);
+    // dataList[findCurrentData].itemDetails.splice(findData, 1);
+    // localStorage.setItem('allInvoiceData', JSON.stringify(dataList));
+
+    // const data = allInvoiceData();
+    // let itemPriceSubtotal: number = 0;
+    // data[findCurrentData].itemDetails.forEach((item: ItemDetails) => {
+    //     itemPriceSubtotal += (parseFloat(item.itemPrice) * item.itemQuantity) ? parseFloat(item.itemPrice) * item.itemQuantity : 0;
+    // })
+    // const subTotal = document.getElementById("subTotal") as HTMLElement | null;
+    // if (subTotal) {
+    //     subTotal.innerHTML = (data[findCurrentData].currency === "USD (United States Doller)" ? `<i class="fa-solid fa-dollar-sign"></i>` : `<i class="fa-solid fa-indian-rupee-sign"></i>`) + " " + itemPriceSubtotal.toString();
+    // }
+
+    // let discountAmount: string = (itemPriceSubtotal * (parseFloat(data[findCurrentData].discount ? data[findCurrentData].discount : "0") / 100)).toFixed(2);
+    // const discountTotal = document.getElementById("discountTotal") as HTMLElement | null;
+    // if (discountTotal) {
+    //     discountTotal.innerHTML = (data[findCurrentData].currency === "USD (United States Doller)" ? `<i class="fa-solid fa-dollar-sign"></i>` : `<i class="fa-solid fa-indian-rupee-sign"></i>`) + " " + (discountAmount ? discountAmount : "0.00");
+    // }
+
+    // let discountTotalAmount: number = itemPriceSubtotal - itemPriceSubtotal * (parseFloat(data[findCurrentData].discount ? data[findCurrentData].discount : "0") / 100);
+    // let taxRateTotal: string = (discountTotalAmount * (parseFloat(data[findCurrentData].taxRate ? data[findCurrentData].taxRate : "0") / 100)).toFixed(2);
+    // const taxTotal = document.getElementById("taxTotal") as HTMLElement | null;
+    // if (taxTotal) {
+    //     taxTotal.innerHTML = (data[findCurrentData].currency === "USD (United States Doller)" ? `<i class="fa-solid fa-dollar-sign"></i>` : `<i class="fa-solid fa-indian-rupee-sign"></i>`) + " " + (taxRateTotal ? taxRateTotal : "0.00");
+    // }
+
+    // let totalAmount: number = itemPriceSubtotal - itemPriceSubtotal * (parseFloat(data[findCurrentData].discount ? data[findCurrentData].discount : "0") / 100);
+    // let allTotal: number = totalAmount + totalAmount * (parseFloat(data[findCurrentData].taxRate ? data[findCurrentData].taxRate : "0") / 100);
+    // const total = document.getElementById("total") as HTMLElement | null;
+    // if (total) {
+    //     total.innerHTML = (data[findCurrentData].currency === "USD (United States Doller)" ? `<i class="fa-solid fa-dollar-sign"></i>` : `<i class="fa-solid fa-indian-rupee-sign"></i>`) + " " + (allTotal.toFixed(2) ? allTotal.toFixed(2) : "0.00");
+    //     dataList[findCurrentData].totalAmount = allTotal.toFixed(2);
+    //     localStorage.setItem('allInvoiceData', JSON.stringify(dataList));
+    // }
+}
+
+const doneInvoice = (index: number): void => {
+    const data = allInvoiceData();
+    const invoiceCurrentData = currentData;
+    data[index] = invoiceCurrentData
+    localStorage.setItem('allInvoiceData', JSON.stringify(data));
+
+    const editDueDateValue = document.getElementById('editDueDateValue') as HTMLInputElement | null;
+    const editBuyerName = document.getElementById('editBuyerName') as HTMLInputElement | null;
+    const editBuyerEmail = document.getElementById('editBuyerEmail') as HTMLInputElement | null;
+    const editBuyerAddress = document.getElementById('editBuyerAddress') as HTMLInputElement | null;
+    const editSellerName = document.getElementById('editSellerName') as HTMLInputElement | null;
+    const editSellerEmail = document.getElementById('editSellerEmail') as HTMLInputElement | null;
+    const editSellerAddress = document.getElementById('editSellerAddress') as HTMLInputElement | null;
+    const editCurrencyValue = document.getElementById('editCurrencyValue') as HTMLInputElement | null;
+    const editTaxRateValue = document.getElementById('editTaxRateValue') as HTMLInputElement | null;
+    const editDiscountValue = document.getElementById('editDiscountValue') as HTMLInputElement | null;
+    const editNote = document.getElementById('editNote') as HTMLInputElement | null;
+    const itemTableError = document.getElementById('itemTableError') as HTMLElement | null;
+
+    const invoiceBlankInput = document.querySelectorAll<HTMLInputElement>('.invoice-blank-input');
+    const tableItemName = document.querySelectorAll<HTMLInputElement>('.table-item-name');
+    const tableItemDiscription = document.querySelectorAll<HTMLInputElement>('.table-item-discription');
+    const itemTableQuantity = document.querySelectorAll<HTMLInputElement>('.item-table-quantity');
+    const tablePrice = document.querySelectorAll<HTMLInputElement>('.table-price');
+    let isFlage: boolean = false;
+    invoiceBlankInput.forEach((item) => {
+        if (!item.value.trim()) {
+            item.style.border = "2px solid red"
+            isFlage = true;
+        } else {
+            item.style.border = "none"
+            // const findData: number = data[index].itemDetails.findIndex((x: ItemDetails) => x.id.toString() === item.parentElement?.parentElement?.id);
+            // data[index].itemDetails[findData].itemName = item.value;
+            // localStorage.setItem('allInvoiceData', JSON.stringify(data));
+        }
+    })
+
+    tableItemName.forEach((item) => {
+        if (!item.value.trim()) {
+            item.style.border = "2px solid red"
+            isFlage = true;
+        } else {
+            item.style.border = "none"
+            // const findData: number = data[index].itemDetails.findIndex((x: ItemDetails) => x.id.toString() === item.parentElement?.parentElement?.id);
+            // data[index].itemDetails[findData].itemName = item.value;
+            // localStorage.setItem('allInvoiceData', JSON.stringify(data));
+        }
+    })
+
+    tableItemDiscription.forEach((item) => {
+        // const findData: number = data[index].itemDetails.findIndex((x: ItemDetails) => x.id.toString() === item.parentElement?.parentElement?.id);
+        // data[index].itemDetails[findData].itemDiscription = item.value;
+        // localStorage.setItem('allInvoiceData', JSON.stringify(data));
+    })
+
+    itemTableQuantity.forEach((item) => {
+        if (!item.value.trim()) {
+            item.style.border = "2px solid red"
+            isFlage = true;
+        } else {
+            item.style.border = "none"
+            // const findData: number = data[index].itemDetails.findIndex((x: ItemDetails) => x.id.toString() === item.parentElement?.parentElement?.id);
+            // data[index].itemDetails[findData].itemQuantity = item.value;
+            // localStorage.setItem('allInvoiceData', JSON.stringify(data));
+        }
+    })
+
+    tablePrice.forEach((item) => {
+        if (!item.value.trim()) {
+            item.style.border = "2px solid red"
+            isFlage = true;
+        } else {
+            item.style.border = "none"
+            // const findData: number = data[index].itemDetails.findIndex((x: ItemDetails) => x.id.toString() === item.parentElement?.parentElement?.id);
+            // data[index].itemDetails[findData].itemPrice = item.value;
+            // localStorage.setItem('allInvoiceData', JSON.stringify(data));
+        }
+    })
+
+    if (!data[index].itemDetails.length) {
+        if (itemTableError)
+            itemTableError.innerHTML = "Please add item!";
+        isFlage = true;
+    } else {
+        if (itemTableError)
+            itemTableError.innerHTML = "";
+    }
+
+    if (isFlage) {
+        return;
+    }
+
+    // let itemPriceSubtotal: number = 0;
+    // data[index].itemDetails.forEach((item: ItemDetails) => {
+    //     itemPriceSubtotal += (parseFloat(item.itemPrice) * item.itemQuantity) ? parseFloat(item.itemPrice) * item.itemQuantity : 0;
+    // })
+    // const subTotal = document.getElementById("subTotal") as HTMLElement | null;
+    // if (subTotal) {
+    //     subTotal.innerHTML = (data[index].currency === "USD (United States Doller)" ? `<i class="fa-solid fa-dollar-sign"></i>` : `<i class="fa-solid fa-indian-rupee-sign"></i>`) + " " + itemPriceSubtotal.toString();
+    // }
+
+    // let discountAmount: string = (itemPriceSubtotal * (parseFloat(data[index].discount ? data[index].discount : "0") / 100)).toFixed(2);
+    // const discountTotal = document.getElementById("discountTotal") as HTMLElement | null;
+    // if (discountTotal) {
+    //     discountTotal.innerHTML = (data[index].currency === "USD (United States Doller)" ? `<i class="fa-solid fa-dollar-sign"></i>` : `<i class="fa-solid fa-indian-rupee-sign"></i>`) + " " + (discountAmount ? discountAmount : "0.00");
+    // }
+
+    // let discountTotalAmount: number = itemPriceSubtotal - itemPriceSubtotal * (parseFloat(data[index].discount ? data[index].discount : "0") / 100);
+    // let taxRateTotal: string = (discountTotalAmount * (parseFloat(data[index].taxRate ? data[index].taxRate : "0") / 100)).toFixed(2);
+    // const taxTotal = document.getElementById("taxTotal") as HTMLElement | null;
+    // if (taxTotal) {
+    //     taxTotal.innerHTML = (data[index].currency === "USD (United States Doller)" ? `<i class="fa-solid fa-dollar-sign"></i>` : `<i class="fa-solid fa-indian-rupee-sign"></i>`) + " " + (taxRateTotal ? taxRateTotal : "0.00");
+    // }
+
+    // let totalAmount: number = itemPriceSubtotal - itemPriceSubtotal * (parseFloat(data[index].discount ? data[index].discount : "0") / 100);
+    // let allTotal: number = totalAmount + totalAmount * (parseFloat(data[index].taxRate ? data[index].taxRate : "0") / 100);
+    // const total = document.getElementById("total") as HTMLElement | null;
+    // if (total) {
+    //     total.innerHTML = (data[index].currency === "USD (United States Doller)" ? `<i class="fa-solid fa-dollar-sign"></i>` : `<i class="fa-solid fa-indian-rupee-sign"></i>`) + " " + (allTotal.toFixed(2) ? allTotal.toFixed(2) : "0.00");
+    //     data[index].totalAmount = allTotal.toFixed(2);
+    //     localStorage.setItem('allInvoiceData', JSON.stringify(data));
+    // }
+
+    if (editDueDateValue && editBuyerName && editBuyerEmail && editBuyerAddress && editSellerName && editSellerEmail && editSellerAddress && editCurrencyValue && editTaxRateValue && editDiscountValue && editNote) {
+
+        const emailPattern = /^[a-zA-Z0-9._-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,4}$/;
+        let isFlage: boolean = false;
+        // (!editDueDateValue.value.trim()) ? editDueDateValue.style.border = "2px solid red" : editDueDateValue.style.border = "none";
+        // (!editBuyerName.value.trim()) ? editBuyerName.style.border = "2px solid red" : editBuyerName.style.border = "none";
+        if (!editBuyerEmail.value.trim()) {
+            editBuyerEmail.style.border = "2px solid red";
+            isFlage = true;
+        } else if (!emailPattern.test(editBuyerEmail.value)) {
+            editBuyerEmail.style.border = "2px solid red";
+            isFlage = true;
+        } else {
+            editBuyerEmail.style.border = "none";
+        }
+        // (!editBuyerAddress.value.trim()) ? editBuyerAddress.style.border = "2px solid red" : editBuyerAddress.style.border = "none";
+        // (!editSellerName.value.trim()) ? editSellerName.style.border = "2px solid red" : editSellerName.style.border = "none";
+        if (!editSellerEmail.value.trim()) {
+            editSellerEmail.style.border = "2px solid red";
+            isFlage = true;
+        } else if (!emailPattern.test(editSellerEmail.value)) {
+            editSellerEmail.style.border = "2px solid red";
+            isFlage = true;
+        } else {
+            editSellerEmail.style.border = "none";
+        }
+        // (!editSellerAddress.value.trim()) ? editSellerAddress.style.border = "2px solid red" : editSellerAddress.style.border = "none";
+        // (!editDiscountValue.value.trim()) ? editDiscountValue.style.border = "2px solid red" : editDiscountValue.style.border = "none";
+        // (!editTaxRateValue.value.trim()) ? editTaxRateValue.style.border = "2px solid red" : editTaxRateValue.style.border = "none";
+
+        if (isFlage) {
+            return;
+        }
+
+        if (editDueDateValue.value && editBuyerName.value && editBuyerEmail.value && editBuyerAddress.value && editSellerName.value && editSellerEmail.value && editSellerAddress.value && editCurrencyValue.value && editTaxRateValue.value && editDiscountValue.value) {
+            const dataList = allInvoiceData();
+
+
+            // dataList[index].dueDate = editDueDateValue.value;
+            // dataList[index].buyerDetails.buyerName = editBuyerName.value;
+            // dataList[index].buyerDetails.buyerEmail = editBuyerEmail.value;
+            // dataList[index].buyerDetails.buyerAddress = editBuyerAddress.value;
+            // dataList[index].sellerDetails.sellerName = editSellerName.value;
+            // dataList[index].sellerDetails.sellerEmail = editSellerEmail.value;
+            // dataList[index].sellerDetails.sellerAddress = editSellerAddress.value;
+            // dataList[index].currency = editCurrencyValue.value;
+            // dataList[index].taxRate = editTaxRateValue.value;
+            // dataList[index].discount = editDiscountValue.value;
+            // dataList[index].note = editNote.value;
+
+            const confirmed: boolean = confirm("Are you sure you want to edit this Invoice?");
+            if (confirmed) {
+                localStorage.setItem('allInvoiceData', JSON.stringify(dataList));
+            }
+        }
+    }
+    list();
+    noInvoice();
+}
+
+const editedReviewInvoice = (index: number): void => {
+
+    // const data = allInvoiceData();
+    let data = currentData;
+    const reviewInvoiceBody = document.getElementById('reviewInvoiceBody') as HTMLElement | null;
+
+    [data].map((item: InvoiceData) => {
+        if (reviewInvoiceBody) {
+            reviewInvoiceBody.innerHTML = `
+            <div class="review-invoice-body">
+                <div class="review-invoice-heading-section">
+                    <h1 class="review-invoice-heading">INVOICE</h1>
+                    <i class="fa-brands fa-pied-piper logo-icon"></i>
+                </div>
+
+                <div class="review-invoice-dates-section">
+                    <p class="review-invoice-date-title">Date: <span class="review-invoice-date">${item.invoiceGenerateDate}</span></p>
+                    <p class="review-invoice-date-title">Due date: <span class="review-invoice-date">${new Date(item.dueDate ? item.dueDate : "").toLocaleDateString('en-GB')}</span></p>
+                </div>
+
+                <div class="review-invoice-buyer-seller-section">
+                    <div class="review-invoice-buyer-seller-detail">
+                        <p class="billed-to-or-from">Billed to:</p>
+                        <p class="buyer-seller-name">${item.buyerDetails.buyerName ? item.buyerDetails.buyerName : ""}</p>
+                        <p class="buyer-seller-email">${item.buyerDetails.buyerEmail ? item.buyerDetails.buyerEmail : ""}</p>
+                        <p class="buyer-seller-address">${item.buyerDetails.buyerAddress ? item.buyerDetails.buyerAddress : ""}</p>
+                    </div>
+                    <div class="review-invoice-buyer-seller-detail">
+                        <p class="billed-to-or-from">From:</p>
+                        <p class="buyer-seller-name">${item.sellerDetails.sellerName ? item.sellerDetails.sellerName : ""}</p>
+                        <p class="buyer-seller-email">${item.sellerDetails.sellerEmail ? item.sellerDetails.sellerEmail : ""}</p>
+                        <p class="buyer-seller-address">${item.sellerDetails.sellerAddress ? item.sellerDetails.sellerAddress : ""}</p>
+                    </div>
+                </div>  
+
+                <div>
+                    <table class="review-invoice-item-table" id="reviewInvoiceItemTable">
+                        <tr class="review-invoice-table-heading-raw">
+                            <th class="review-invoice-item">Item</th>
+                            <th class="review-invoice-quantity">Quantity</th>
+                            <th class="review-invoice-price">Price</th>
+                            <th class="review-invoice-amount">Amount</th>
+                        </tr>
+                    </table>
+
+                <div class="review-invoice-calculation">
+                    <div class="invoice-calculation">
+                        <p class="calculation-heading">Subtotal:</p>
+                        <p class="calculation-number"><span id="reviewInvoiceSubtotal">${item.currency === "USD (United States Doller)" ? `<i class="fa-solid fa-dollar-sign"></i>` : `<i class="fa-solid fa-indian-rupee-sign"></i>`}</i></span></p>
+                    </div>
+                    <div class="invoice-calculation">
+                        <p class="calculation-heading">Discount:</p>
+                        <p class="calculation-number"><span>(${item.discount ? item.discount : "0"}%)</span> <span>${item.currency === "USD (United States Doller)" ? `<i class="fa-solid fa-dollar-sign"></i>` : `<i class="fa-solid fa-indian-rupee-sign"></i>`}</span> <span id="reviewInvoiceDiscount">0.00</span></p>
+                    </div>
+                    <div class="invoice-calculation">
+                        <p class="calculation-heading">Tax:</p>
+                        <p class="calculation-number"><span>(${item.taxRate ? item.taxRate : "0"}%)</span> <span>${item.currency === "USD (United States Doller)" ? `<i class="fa-solid fa-dollar-sign"></i>` : `<i class="fa-solid fa-indian-rupee-sign"></i>`}</span> <span id="reviewInvoiceTax">0.00</span></p>
+                    </div>
+
+                    <div class="review-invoice-total-section">
+                        <p class="review-invoice-total-heading">Total</p>
+                        <p class="review-invoice-total"><span>${item.currency === "USD (United States Doller)" ? `<i class="fa-solid fa-dollar-sign"></i>` : `<i class="fa-solid fa-indian-rupee-sign"></i>`} <span id="reviewInvoiceTotal">0.00</span></p>
+                    </div>
+                </div>    
+
+                    <div class="review-invoice-note-section">
+                        <p class="review-invoice-note-title">Notes: <span class="review-invoice-note">${item.note ? item.note : ""}</span></p>
+                    </div>
+
+                </div>
+
+            </div>
+        `}
+    })
+
+    const reviewInvoiceItemTable = document.getElementById('reviewInvoiceItemTable') as HTMLElement | null;
+    data.itemDetails.map((item: ItemDetails) => {
+        if (reviewInvoiceItemTable) {
+            reviewInvoiceItemTable.innerHTML += `
+                <tr>
+                    <td class="review-invoice-item">${item.itemName ? item.itemName : ""} <span>${item.itemDiscription ? `(${item.itemDiscription})` : ""}</span></td>
+                    <td class="review-invoice-quantity">${item.itemQuantity ? item.itemQuantity : ""}</td>
+                    <td class="review-invoice-price">${data.currency === "USD (United States Doller)" ? `<i class="fa-solid fa-dollar-sign"></i>` : `<i class="fa-solid fa-indian-rupee-sign"></i>`} ${item.itemPrice ? item.itemPrice : ""}</td>
+                    <td class="review-invoice-amount">${data.currency === "USD (United States Doller)" ? `<i class="fa-solid fa-dollar-sign"></i>` : `<i class="fa-solid fa-indian-rupee-sign"></i>`} ${parseFloat(item.itemPrice) * item.itemQuantity ? parseFloat(item.itemPrice) * item.itemQuantity : ""}</td>
+                </tr>
+        `}
+    })
+
+    let itemPriceSubtotal: number = 0;
+    data.itemDetails.forEach((item: ItemDetails) => {
+        itemPriceSubtotal += (parseFloat(item.itemPrice) * item.itemQuantity) ? parseFloat(item.itemPrice) * item.itemQuantity : 0;
+    })
+    const reviewInvoiceSubtotal = document.getElementById('reviewInvoiceSubtotal');
+    if (reviewInvoiceSubtotal) {
+        reviewInvoiceSubtotal.innerHTML = (data.currency === "USD (United States Doller)" ? `<i class="fa-solid fa-dollar-sign"></i>` : `<i class="fa-solid fa-indian-rupee-sign"></i>`) + " " + itemPriceSubtotal.toString();
+    }
+
+    const discountAmount: string = (itemPriceSubtotal * (parseFloat(data.discount ? data.discount : "0") / 100)).toFixed(2);
+    const reviewInvoiceDiscount = document.getElementById('reviewInvoiceDiscount');
+    if (reviewInvoiceDiscount) {
+        reviewInvoiceDiscount.innerHTML = (discountAmount ? discountAmount : "0.00");
+    }
+
+    const discountTotal: number = itemPriceSubtotal - itemPriceSubtotal * (parseFloat(data.discount ? data.discount : "0") / 100);
+    const taxRateTotal: string = (discountTotal * (parseFloat(data.taxRate ? data.taxRate : "0") / 100)).toFixed(2);
+    const reviewInvoiceTax = document.getElementById('reviewInvoiceTax');
+    if (reviewInvoiceTax) {
+        reviewInvoiceTax.innerHTML = (taxRateTotal ? taxRateTotal : "0.00");
+    }
+
+    const allTotal: number = discountTotal + discountTotal * (parseFloat(data.taxRate ? data.taxRate : "0") / 100);
+    const reviewInvoiceTotal = document.getElementById('reviewInvoiceTotal');
+    if (reviewInvoiceTotal) {
+        reviewInvoiceTotal.innerHTML = (allTotal.toFixed(2) ? allTotal.toFixed(2) : "0.00");
+    }
+
+    // [data[index]].map((item: InvoiceData) => {
+    //     if (reviewInvoiceBody) {
+    //         reviewInvoiceBody.innerHTML = `
+    //         <div class="review-invoice-body">
+    //             <div class="review-invoice-heading-section">
+    //                 <h1 class="review-invoice-heading">INVOICE</h1>
+    //                 <i class="fa-brands fa-pied-piper logo-icon"></i>
+    //             </div>
+
+    //             <div class="review-invoice-dates-section">
+    //                 <p class="review-invoice-date-title">Date: <span class="review-invoice-date">${item.invoiceGenerateDate}</span></p>
+    //                 <p class="review-invoice-date-title">Due date: <span class="review-invoice-date">${new Date(item.dueDate ? item.dueDate : "").toLocaleDateString('en-GB')}</span></p>
+    //             </div>
+
+    //             <div class="review-invoice-buyer-seller-section">
+    //                 <div class="review-invoice-buyer-seller-detail">
+    //                     <p class="billed-to-or-from">Billed to:</p>
+    //                     <p class="buyer-seller-name">${item.buyerDetails.buyerName ? item.buyerDetails.buyerName : ""}</p>
+    //                     <p class="buyer-seller-email">${item.buyerDetails.buyerEmail ? item.buyerDetails.buyerEmail : ""}</p>
+    //                     <p class="buyer-seller-address">${item.buyerDetails.buyerAddress ? item.buyerDetails.buyerAddress : ""}</p>
+    //                 </div>
+    //                 <div class="review-invoice-buyer-seller-detail">
+    //                     <p class="billed-to-or-from">From:</p>
+    //                     <p class="buyer-seller-name">${item.sellerDetails.sellerName ? item.sellerDetails.sellerName : ""}</p>
+    //                     <p class="buyer-seller-email">${item.sellerDetails.sellerEmail ? item.sellerDetails.sellerEmail : ""}</p>
+    //                     <p class="buyer-seller-address">${item.sellerDetails.sellerAddress ? item.sellerDetails.sellerAddress : ""}</p>
+    //                 </div>
+    //             </div>  
+
+    //             <div>
+    //                 <table class="review-invoice-item-table" id="reviewInvoiceItemTable">
+    //                     <tr class="review-invoice-table-heading-raw">
+    //                         <th class="review-invoice-item">Item</th>
+    //                         <th class="review-invoice-quantity">Quantity</th>
+    //                         <th class="review-invoice-price">Price</th>
+    //                         <th class="review-invoice-amount">Amount</th>
+    //                     </tr>
+    //                 </table>
+
+    //             <div class="review-invoice-calculation">
+    //                 <div class="invoice-calculation">
+    //                     <p class="calculation-heading">Subtotal:</p>
+    //                     <p class="calculation-number"><span id="reviewInvoiceSubtotal">${item.currency === "USD (United States Doller)" ? `<i class="fa-solid fa-dollar-sign"></i>` : `<i class="fa-solid fa-indian-rupee-sign"></i>`}</i></span></p>
+    //                 </div>
+    //                 <div class="invoice-calculation">
+    //                     <p class="calculation-heading">Discount:</p>
+    //                     <p class="calculation-number"><span>(${item.discount ? item.discount : "0"}%)</span> <span>${item.currency === "USD (United States Doller)" ? `<i class="fa-solid fa-dollar-sign"></i>` : `<i class="fa-solid fa-indian-rupee-sign"></i>`}</span> <span id="reviewInvoiceDiscount">0.00</span></p>
+    //                 </div>
+    //                 <div class="invoice-calculation">
+    //                     <p class="calculation-heading">Tax:</p>
+    //                     <p class="calculation-number"><span>(${item.taxRate ? item.taxRate : "0"}%)</span> <span>${item.currency === "USD (United States Doller)" ? `<i class="fa-solid fa-dollar-sign"></i>` : `<i class="fa-solid fa-indian-rupee-sign"></i>`}</span> <span id="reviewInvoiceTax">0.00</span></p>
+    //                 </div>
+
+    //                 <div class="review-invoice-total-section">
+    //                     <p class="review-invoice-total-heading">Total</p>
+    //                     <p class="review-invoice-total"><span>${item.currency === "USD (United States Doller)" ? `<i class="fa-solid fa-dollar-sign"></i>` : `<i class="fa-solid fa-indian-rupee-sign"></i>`} <span id="reviewInvoiceTotal">0.00</span></p>
+    //                 </div>
+    //             </div>    
+
+    //                 <div class="review-invoice-note-section">
+    //                     <p class="review-invoice-note-title">Notes: <span class="review-invoice-note">${item.note ? item.note : ""}</span></p>
+    //                 </div>
+
+    //             </div>
+
+    //         </div>
+    //     `}
+    // })
+
+    // const reviewInvoiceItemTable = document.getElementById('reviewInvoiceItemTable') as HTMLElement | null;
+    // data[index].itemDetails.map((item: ItemDetails) => {
+    //     if (reviewInvoiceItemTable) {
+    //         reviewInvoiceItemTable.innerHTML += `
+    //             <tr>
+    //                 <td class="review-invoice-item">${item.itemName ? item.itemName : ""} <span>(${item.itemDiscription ? `(${item.itemDiscription})` : ""})</span></td>
+    //                 <td class="review-invoice-quantity">${item.itemQuantity ? item.itemQuantity : ""}</td>
+    //                 <td class="review-invoice-price">${data[index].currency === "USD (United States Doller)" ? `<i class="fa-solid fa-dollar-sign"></i>` : `<i class="fa-solid fa-indian-rupee-sign"></i>`} ${item.itemPrice ? item.itemPrice : ""}</td>
+    //                 <td class="review-invoice-amount">${data[index].currency === "USD (United States Doller)" ? `<i class="fa-solid fa-dollar-sign"></i>` : `<i class="fa-solid fa-indian-rupee-sign"></i>`} ${parseFloat(item.itemPrice) * item.itemQuantity ? parseFloat(item.itemPrice) * item.itemQuantity : ""}</td>
+    //             </tr>
+    //     `}
+    // })
+
+    // let itemPriceSubtotal: number = 0;
+    // data[index].itemDetails.forEach((item: ItemDetails) => {
+    //     itemPriceSubtotal += (parseFloat(item.itemPrice) * item.itemQuantity) ? parseFloat(item.itemPrice) * item.itemQuantity : 0;
+    // })
+    // const reviewInvoiceSubtotal = document.getElementById('reviewInvoiceSubtotal');
+    // if (reviewInvoiceSubtotal) {
+    //     reviewInvoiceSubtotal.innerHTML = (data[index].currency === "USD (United States Doller)" ? `<i class="fa-solid fa-dollar-sign"></i>` : `<i class="fa-solid fa-indian-rupee-sign"></i>`) + " " + itemPriceSubtotal.toString();
+    // }
+
+    // const discountAmount: string = (itemPriceSubtotal * (parseFloat(data[index].discount ? data[index].discount : "0") / 100)).toFixed(2);
+    // const reviewInvoiceDiscount = document.getElementById('reviewInvoiceDiscount');
+    // if (reviewInvoiceDiscount) {
+    //     reviewInvoiceDiscount.innerHTML = (discountAmount ? discountAmount : "0.00");
+    // }
+
+    // const discountTotal: number = itemPriceSubtotal - itemPriceSubtotal * (parseFloat(data[index].discount ? data[index].discount : "0") / 100);
+    // const taxRateTotal: string = (discountTotal * (parseFloat(data[index].taxRate ? data[index].taxRate : "0") / 100)).toFixed(2);
+    // const reviewInvoiceTax = document.getElementById('reviewInvoiceTax');
+    // if (reviewInvoiceTax) {
+    //     reviewInvoiceTax.innerHTML = (taxRateTotal ? taxRateTotal : "0.00");
+    // }
+
+    // const allTotal: number = discountTotal + discountTotal * (parseFloat(data[index].taxRate ? data[index].taxRate : "0") / 100);
+    // const reviewInvoiceTotal = document.getElementById('reviewInvoiceTotal');
+    // if (reviewInvoiceTotal) {
+    //     reviewInvoiceTotal.innerHTML = (allTotal.toFixed(2) ? allTotal.toFixed(2) : "0.00");
+    // }
+}
+
+
+const printInvoice = () => {
+    console.log('hello');
+
+}
+

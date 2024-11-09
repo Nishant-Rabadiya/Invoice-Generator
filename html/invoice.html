@@ -1,0 +1,226 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Invoice Generator</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet"
+        integrity="sha384-QWTKZyjpPEjISv5WaRU9OFeRpok6YctnYmDr5pNlyT2bRjXh0JMhjY6hW+ALEwIH" crossorigin="anonymous">
+
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css"
+        integrity="sha512-SnH5WK+bZxgPHs44uWIX+LLJAJ9/2PkPKZ5QiAj6Ta86w+fsb2TkcmfRyVX3pBnMFcV7oQPJkl9QevSCWr3W6A=="
+        crossorigin="anonymous" referrerpolicy="no-referrer" />
+
+    <link rel="stylesheet" href="/css/invoice.css">
+</head>
+
+<body>
+    <div class="navbar">
+        <i class="fa-brands fa-pied-piper header-logo"></i>
+        <div class="invoice-due-date">
+            <p class="navbar-heading">Invoice Generator</p>
+        </div>
+        <button class="navbar-add-invoice-button" onclick="addInvoice(this)" id="addInvoiceButton">Add Invoice</button>
+    </div>
+
+
+    <main>
+        <div class="invoice-body" id="invoiceBody">
+            <!-- <div class="invoice-details-section">
+
+                <div class="invoice-date-section">
+                    <p class="invoice-date">Date: <spans class="invoice-current-date">6/25/2024</spans>
+                    </p>
+                    <div>
+                        <p class="invoice-date">Due date: <input type="date" class="invoice-due-date-input"
+                                id="dueDate" /></p>
+                    </div>
+                </div>
+
+                <div class="invoice-buyer-seller-detalis">
+                    <div>
+                        <p class="invoice-bill-to-or-from">Bill to:</p>
+                        <input class="invoice-buyer-seller-detalis-input" type="text"
+                            placeholder="Who is this invoice to?" />
+                        <input class="invoice-buyer-seller-detalis-input" type="text" placeholder="Email address" />
+                        <input class="invoice-buyer-seller-detalis-input" type="text" placeholder="Billing address" />
+                    </div>
+                    <div>
+                        <p class="invoice-bill-to-or-from">Bill from:</p>
+                        <input class="invoice-buyer-seller-detalis-input" type="text"
+                            placeholder="Who is this invoice from?" />
+                        <input class="invoice-buyer-seller-detalis-input" type="text" placeholder="Email address" />
+                        <input class="invoice-buyer-seller-detalis-input" type="text" placeholder="Billing address" />
+                    </div>
+                </div>
+
+                <div>
+                    <table class="items-table">
+                        <tr>
+                            <th class="table-item table-data">ITEM</th>
+                            <th class="table-quantity table-data">QTY</th>
+                            <th class="table-price-rate table-data">PRICE/RATE</th>
+                            <th class="table-action table-data">ACTION</th>
+                        </tr>
+                        <tr id="">
+                            <td>
+                                <input oninput="itemValue(this)" value="" class="table-item-input table-item-name" type="text" placeholder="Item name" />
+                                <input oninput="itemDiscriptionValue(this)" value=""class="table-item-input table-item-discription" type="text" placeholder="Item description" />
+                            </td>
+                            <td><input oninput="itemQuantityValue(this)" value="" class="table-quantity-input item-table-quantity" type="number" placeholder="0" /></td>
+                            <td><span class="table-currency-symbol"></span><input oninput="itemPriceValue(this)" value="" class="table-praice-rate-input table-price" type="number" placeholder="0" /></td>
+                            <td><button class="table-action-button" onclick="removeItemTableRaw(this)"><i class="fa-regular fa-trash-can"></i></button></td>
+                        </tr>
+                    </table>
+                </div>
+
+                <div>
+                    <button class="add-item-button">Add Item</button>
+                </div>
+
+                <div class="invoice-calculation-section">
+                    <div class="invoice-calculation">
+                        <p class="calculation-heading">Subtotal:</p>
+                        <p class="calculation-number"><span><i class="fa-solid fa-dollar-sign"></i></span> 1.00</p>
+                    </div>
+                    <div class="invoice-calculation">
+                        <p class="calculation-heading">Discount:</p>
+                        <p class="calculation-number"><span>(0%)</span> <span><i
+                                    class="fa-solid fa-dollar-sign"></i></span> 0.00</p>
+                    </div>
+                    <div class="invoice-calculation">
+                        <p class="calculation-heading">Tax:</p>
+                        <p class="calculation-number"><span>(0%)</span> <span><i
+                                    class="fa-solid fa-dollar-sign"></i></span> 0.00</p>
+                    </div>
+                    <div class="invoice-calculation final-calculation">
+                        <p class="invoice-total-heading">Total:</p>
+                        <p class="invoice-total"><i class="fa-solid fa-dollar-sign"></i> 1</p>
+                    </div>
+                </div>
+                <hr class="horizontal-line">
+
+                <div>
+                    <p class="add-invoice-note-heading">Notes:</p>
+                    <textarea name="" id="" class="add-invoice-note" placeholder="Thanks for your business"></textarea>
+                </div>
+
+                <div class="submit-section">
+                    <button class="submit-invoice">Submit</button>
+                </div>
+            </div>
+
+
+            <div class="invoice-currency-discount-tax-section">
+                <button class="review-invoice" data-bs-toggle="modal" data-bs-target="#staticBackdrop">Review
+                    Invoice</button>
+
+                <div>
+                    <label class="currency-label">Currency:</label>
+                    <select class="currency-dropdown">
+                        <option>USD (United States Doller)</option>
+                        <option>INR (Indian Rupee)</option>
+                    </select>
+                </div>
+
+                <div>
+                    <p class="discount-tax-rate-heading">Tax rate:</p>
+                    <input type="number" class="discount-tax-rate-input" placeholder="0.0" /><span
+                        class="discount-tax-rate-sign">%</span>
+                </div>
+
+                <div>
+                    <p class="discount-tax-rate-heading">Discount rate:</p>
+                    <input type="number" class="discount-tax-rate-input" placeholder="0.0" /><span
+                        class="discount-tax-rate-sign">%</span>
+                </div>
+            </div>
+        </div> -->
+
+        </div>
+    </main>
+
+
+    <!-- Modal -->
+    <div class="modal fade modal-xl" id="staticBackdrop" data-bs-backdrop="static" data-bs-keyboard="false"
+        tabindex="-1" aria-labelledby="staticBackdropLabel" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h1 class="modal-title fs-5" id="staticBackdropLabel">Review Invoice</h1>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+
+                <div class="modal-body" id="reviewInvoiceBody">
+
+                    <!-- <div class="review-invoice-body">
+                        <div class="review-invoice-heading-section">
+                            <h1 class="review-invoice-heading">INVOICE</h1>
+                            <i class="fa-brands fa-pied-piper logo-icon"></i>
+                        </div>
+
+                        <p class="review-invoice-date-title">Date: <span class="review-invoice-date">26-6-2024</span></p>
+
+                        <div class="review-invoice-buyer-seller-section">
+                            <div class="review-invoice-buyer-seller-detail">
+                                <p class="billed-to-or-from">Billed to:</p>
+                                <p class="buyer-seller-name">Nishant Rabadiya</p>
+                                <p class="buyer-seller-email">hello@gmail.com</p>
+                                <p class="buyer-seller-address">100, Nimavi house, Varachha, Surat</p>
+                            </div>
+                            <div class="review-invoice-buyer-seller-detail">
+                                <p class="billed-to-or-from">From:</p>
+                                <p class="buyer-seller-name">Jayan Ribadiya</p>
+                                <p class="buyer-seller-email">hellojayan@gmail.com</p>
+                                <p class="buyer-seller-address">100, Nimavi house, Varachha, Surat</p>
+                            </div>
+                        </div>
+
+                        <div>
+                            <table class="review-invoice-item-table">
+                                <tr class="review-invoice-table-heading-raw">
+                                    <th class="review-invoice-item">Item</th>
+                                    <th class="review-invoice-quantity">Quantity</th>
+                                    <th class="review-invoice-price">Price</th>
+                                    <th class="review-invoice-amount">Amount</th>
+                                </tr>
+                                <tr>
+                                    <td class="review-invoice-item-data">logo <span>(discription)</span></td>
+                                    <td class="review-invoice-data">2</td>
+                                    <td class="review-invoice-data">$500</td>
+                                    <td class="review-invoice-data">$1000</td>
+                                </tr>
+                                <tr>
+                                    <td class="review-invoice-item-data">logo <span>(discription)</span></td>
+                                    <td class="review-invoice-data">2</td>
+                                    <td class="review-invoice-data">$500</td>
+                                    <td class="review-invoice-data">$1000</td>
+                                </tr>
+                            </table>
+                            <div class="review-invoice-total-section">
+                                <p class="review-invoice-total-heading">Total</p>
+                                <p class="review-invoice-total">$3000</p>
+                            </div>
+
+                            <div class="review-invoice-note-section">
+                                <p class="review-invoice-note-title">Notes: <span class="review-invoice-note">Thank for business</span></p>
+                            </div>
+
+                        </div>
+
+                    </div> -->
+
+                </div>
+
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"
+        integrity="sha384-YvpcrYf0tY3lHB60NNkmXc5s9fDVZLESaAA55NDzOxhy9GkcIdslK1eN7N6jIeHz"
+        crossorigin="anonymous"></script>
+    <script src="/dist/invoice.js"></script>
+</body>
+
+</html>
